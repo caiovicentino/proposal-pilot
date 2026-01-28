@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String     @id @default(cuid())
+  stackUserId   String     @unique
+  email         String     @unique
+  name          String?
+  company       String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  proposals     Proposal[]
+  templates     Template[]
+  settings      Settings?
+}
+
+model Proposal {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Client Info
+  clientName    String
+  clientEmail   String?
+  clientCompany String?
+  
+  // Proposal Content
+  title         String
+  brief         String    @db.Text
+  scope         String    @db.Text
+  deliverables  String    @db.Text
+  timeline      String    @db.Text
+  pricing       Json      // { items: [{ name, price, description }], total, currency }
+  terms         String?   @db.Text
+  notes         String?   @db.Text
+  
+  // Metadata
+  template      String    @default("consulting")
+  status        ProposalStatus @default(DRAFT)
+  currency      String    @default("USD")
+  validUntil    DateTime?
+  
+  // Tracking
+  sentAt        DateTime?
+  viewedAt      DateTime?
+  respondedAt   DateTime?
+  response      ProposalResponse?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model Template {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name          String
+  type          String    // consulting, development, design, marketing, construction
+  content       Json      // { sections, defaultPricing, terms }
+  isDefault     Boolean   @default(false)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([userId])
+}
+
+model Settings {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyName   String?
+  logo          String?   // URL
+  email         String?
+  phone         String?
+  website       String?
+  address       String?
+  taxId         String?
+  
+  defaultCurrency String  @default("USD")
+  defaultTerms  String?   @db.Text
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum ProposalResponse {
+  ACCEPTED
+  REJECTED
+  NEGOTIATING
+}
