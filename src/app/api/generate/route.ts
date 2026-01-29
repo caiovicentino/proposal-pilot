@@ -3,6 +3,14 @@ import { stackServerApp } from '@/lib/stack';
 import { prisma } from '@/lib/prisma';
 import { generateProposal, ProposalInput } from '@/lib/openai';
 
+// Helper to convert array or object to string
+function toStringField(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.join('\n• ');
+  if (typeof value === 'object' && value !== null) return JSON.stringify(value, null, 2);
+  return String(value || '');
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Auth check
@@ -56,19 +64,19 @@ export async function POST(request: NextRequest) {
       currency,
     });
 
-    // Save to database
+    // Save to database - convert arrays/objects to strings for text fields
     const proposal = await prisma.proposal.create({
       data: {
         userId: dbUser.id,
-        title: generated.title,
-        clientName: generated.clientName,
-        clientCompany: generated.clientCompany || '',
+        title: toStringField(generated.title),
+        clientName: toStringField(generated.clientName),
+        clientCompany: toStringField(generated.clientCompany) || '',
         brief,
-        scope: generated.scope,
-        deliverables: generated.deliverables,
-        timeline: generated.timeline,
-        pricing: generated.pricing,
-        terms: generated.terms,
+        scope: toStringField(generated.scope),
+        deliverables: toStringField(generated.deliverables),
+        timeline: toStringField(generated.timeline),
+        pricing: generated.pricing, // Keep as JSON
+        terms: toStringField(generated.terms),
         template,
         currency,
         status: 'DRAFT',
